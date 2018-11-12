@@ -680,6 +680,9 @@ class myMain(QtGui.QWidget):
             # print event.key(), format(event.key(), '08x')
             if event.key() == Qt.Key_F4:
                 myquit()
+                if weatherplayer is not None:
+                    weatherplayer.kill()
+                    weatherplayer = None
             if event.key() == Qt.Key_F2:
                 if time.time() > lastkeytime:
                     if weatherplayer is None:
