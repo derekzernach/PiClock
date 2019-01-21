@@ -6,12 +6,11 @@ from PyQt4.QtGui import QColor
 #  can be completed under the RADAR section
 primary_coordinates = 44.9764016, -93.2486732  # Change to your Lat/Lon
 
-wuprefix = 'http://api.wunderground.com/api/'
 # Location for weather report
-wulocation = LatLng(primary_coordinates[0], primary_coordinates[1])
+location = LatLng(primary_coordinates[0], primary_coordinates[1])
 # Default radar location
 primary_location = LatLng(primary_coordinates[0], primary_coordinates[1])
-noaastream = 'http://audioplayer.wunderground.com:80/tim273/edina'
+noaastream = 'http://www.urberg.net:8000/tim273/edina'
 background = 'images/bb.jpg'
 squares1 = 'images/squares1-green.png'
 squares2 = 'images/squares2-green.png'
@@ -50,10 +49,6 @@ weather_refresh = 30
 # Wind in degrees instead of cardinal 0 = cardinal, 1 = degrees
 wind_degrees = 0
 
-# Depreciated: use 'satellite' key in radar section, on a per radar basis
-# if this is used, all radar blocks will get satellite images
-satellite = 0
-
 # Font attribute applied globally
 fontattr = 'font-weight: bold; '
 
@@ -62,9 +57,9 @@ dimcolor = QColor('#103125')
 dimcolor.setAlpha(192)
 
 # Language Specific wording
-# Weather Undeground Language code
-#  (https://www.wunderground.com/weather/api/d/docs?d=language-support&MR=1)
-wuLanguage = "EN"
+# DarkSky Language code
+#  (https://darksky.net/dev/docs under lang=)
+Language = "EN"
 
 # The Python Locale for date/time (locale.setlocale)
 #  '' for default Pi Setting
@@ -101,7 +96,7 @@ LSnow = " Snow: "
 radar1 = {
     'center': primary_location,  # the center of your radar block
     'zoom': 7,  # this is a google maps zoom factor, bigger = smaller area
-    'satellite': 0,  # 1 => show satellite images instead of radar(colorized IR)
+    'style': 'mapbox/cj5l80zrp29942rmtg0zctjto',  # Mapbox calls this Decimal
     'markers': (   # google maps markers can be overlayed
         {
             'location': primary_location,
@@ -115,7 +110,7 @@ radar1 = {
 radar2 = {
     'center': primary_location,
     'zoom': 11,
-    'satellite': 0,
+    'style': 'mapbox/cj5l80zrp29942rmtg0zctjto',  # Mapbox calls this Decimal
     'markers': (
         {
             'location': primary_location,
@@ -129,7 +124,7 @@ radar2 = {
 radar3 = {
     'center': primary_location,
     'zoom': 7,
-    'satellite': 0,
+    'style': 'mapbox/cj5l80zrp29942rmtg0zctjto',  # Mapbox calls this Decimal
     'markers': (
         {
             'location': primary_location,
@@ -142,7 +137,7 @@ radar3 = {
 radar4 = {
     'center': primary_location,
     'zoom': 11,
-    'satellite': 0,
+    'style': 'mapbox/cj5l80zrp29942rmtg0zctjto',  # Mapbox calls this Decimal
     'markers': (
         {
             'location': primary_location,

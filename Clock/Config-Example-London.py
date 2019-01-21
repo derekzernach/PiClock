@@ -7,8 +7,7 @@ from PyQt4.QtGui import QColor
 # completed under the RADAR section
 primary_coordinates = 51.5286416, -0.1015987  # Change to your Lat/Lon
 
-wuprefix = 'http://api.wunderground.com/api/'
-wulocation = LatLng(primary_coordinates[0], primary_coordinates[1])
+location = LatLng(primary_coordinates[0], primary_coordinates[1])
 primary_location = LatLng(primary_coordinates[0], primary_coordinates[1])
 noaastream = '???'
 background = 'images/london-at-night-wallpapers.jpg'
@@ -44,9 +43,6 @@ radar_refresh = 10      # minutes
 weather_refresh = 30    # minutes
 # Wind in degrees instead of cardinal 0 = cardinal, 1 = degrees
 wind_degrees = 0
-# Depreciated: use 'satellite' key in radar section, on a per radar basis
-# if this is used, all radar blocks will get satellite images
-satellite = 0
 
 # gives all text additional attributes using QT style notation
 # example: fontattr = 'font-weight: bold; '
@@ -58,9 +54,9 @@ dimcolor = QColor('#000000')
 dimcolor.setAlpha(0)
 
 # Language Specific wording
-# Weather Undeground Language code
-#  (https://www.wunderground.com/weather/api/d/docs?d=language-support&MR=1)
-wuLanguage = "EN"
+# DarkSky Language code
+#  (https://darksky.net/dev/docs under lang=)
+Language = "EN"
 
 # The Python Locale for date/time (locale.setlocale)
 #  '' for default Pi Setting
@@ -97,7 +93,6 @@ LSnow = " Snow: "
 radar1 = {
     'center': primary_location,  # the center of your radar block
     'zoom': 7,  # this is a google maps zoom factor, bigger = smaller area
-    'satellite': 0,    # 1 => show satellite images (colorized IR images)
     'markers': (   # google maps markers can be overlayed
         {
             'location': primary_location,
@@ -111,7 +106,6 @@ radar1 = {
 radar2 = {
     'center': primary_location,
     'zoom': 11,
-    'satellite': 0,
     'markers': (
         {
             'location': primary_location,
@@ -125,7 +119,6 @@ radar2 = {
 radar3 = {
     'center': primary_location,
     'zoom': 7,
-    'satellite': 0,
     'markers': (
         {
             'location': primary_location,
@@ -138,7 +131,6 @@ radar3 = {
 radar4 = {
     'center': primary_location,
     'zoom': 11,
-    'satellite': 0,
     'markers': (
         {
             'location': primary_location,

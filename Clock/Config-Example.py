@@ -7,10 +7,9 @@ from PyQt4.QtGui import QColor
 # completed under the RADAR section
 primary_coordinates = 44.9764016, -93.2486732  # Change to your Lat/Lon
 
-wuprefix = 'http://api.wunderground.com/api/'
-wulocation = LatLng(primary_coordinates[0], primary_coordinates[1])
+location = LatLng(primary_coordinates[0], primary_coordinates[1])
 primary_location = LatLng(primary_coordinates[0], primary_coordinates[1])
-noaastream = 'http://audioplayer.wunderground.com:80/tim273/edina'
+noaastream = 'http://www.urberg.net:8000/tim273/edina'
 background = 'images/clockbackground-kevin.png'
 squares1 = 'images/squares1-kevin.png'
 squares2 = 'images/squares2-kevin.png'
@@ -38,15 +37,12 @@ digitalsize = 200
 #  The above example shows in this way:
 #  https://github.com/n0bel/PiClock/blob/master/Documentation/Digital%20Clock%20v2.jpg
 
-
+usemapbox = 0   # Use Mapbox.com for maps, needs api key (mbapi in ApiKeys.py)
 metric = 0  # 0 = English, 1 = Metric
 radar_refresh = 10      # minutes
 weather_refresh = 30    # minutes
 # Wind in degrees instead of cardinal 0 = cardinal, 1 = degrees
 wind_degrees = 0
-# Depreciated: use 'satellite' key in radar section, on a per radar basis
-# if this is used, all radar blocks will get satellite images
-satellite = 0
 
 # gives all text additional attributes using QT style notation
 # example: fontattr = 'font-weight: bold; '
@@ -58,9 +54,9 @@ dimcolor = QColor('#000000')
 dimcolor.setAlpha(0)
 
 # Language Specific wording
-# Weather Undeground Language code
-#  (https://www.wunderground.com/weather/api/d/docs?d=language-support&MR=1)
-wuLanguage = "EN"
+# DarkSky Language code
+#  (https://darksky.net/dev/docs under lang=)
+Language = "EN"
 
 # The Python Locale for date/time (locale.setlocale)
 #  '' for default Pi Setting
@@ -84,7 +80,14 @@ LMoonPhase = " Moon Phase:"
 LInsideTemp = "Inside Temp "
 LRain = " Rain: "
 LSnow = " Snow: "
-
+Lmoon1 = 'New Moon'
+Lmoon2 = 'Waxing Crescent'
+Lmoon3 = 'First Quarter'
+Lmoon4 = 'Waxing Gibbous'
+Lmoon5 = 'Full Moon'
+Lmoon6 = 'Waning Gibbous'
+Lmoon7 = 'Third Quarter'
+Lmoon8 = 'Waning Crecent'
 
 # RADAR
 # By default, primary_location entered will be the
@@ -96,13 +99,14 @@ LSnow = " Snow: "
 # LatLng(44.9764016,-93.2486732),
 radar1 = {
     'center': primary_location,  # the center of your radar block
-    'zoom': 7,  # this is a google maps zoom factor, bigger = smaller area
-    'satellite': 0,    # 1 => show satellite images (colorized IR images)
+    'zoom': 7,  # this is a maps zoom factor, bigger = smaller area
+    'style': 'mapbox/satellite-streets-v10',  # optional style (mapbox only)
     'markers': (   # google maps markers can be overlayed
         {
             'location': primary_location,
             'color': 'red',
             'size': 'small',
+            'image': 'teardrop-dot',  # optional image from the markers folder
         },          # dangling comma is on purpose.
     )
 }
@@ -111,7 +115,6 @@ radar1 = {
 radar2 = {
     'center': primary_location,
     'zoom': 11,
-    'satellite': 0,
     'markers': (
         {
             'location': primary_location,
@@ -125,7 +128,6 @@ radar2 = {
 radar3 = {
     'center': primary_location,
     'zoom': 7,
-    'satellite': 0,
     'markers': (
         {
             'location': primary_location,
@@ -138,7 +140,6 @@ radar3 = {
 radar4 = {
     'center': primary_location,
     'zoom': 11,
-    'satellite': 0,
     'markers': (
         {
             'location': primary_location,

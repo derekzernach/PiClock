@@ -1,4 +1,5 @@
-# http://stackoverflow.com/questions/12507274/how-to-get-bounds-of-a-google-static-map
+# http://stackoverflow.com/
+#   questions/12507274/how-to-get-bounds-of-a-google-static-map
 import math
 MERCATOR_RANGE = 256
 
@@ -55,7 +56,7 @@ class MercatorProjection:
         origin = self.pixelOrigin_
         point.x = origin.x + latLng.lng * self.pixelsPerLonDegree_
         # NOTE(appleton): Truncating to 0.9999 effectively limits latitude to
-        # 89.189.This is about a third of a tile past the edge of the world tile
+        # 89.189.This is about a third of a tile past the edge of world tile
         siny = bound(math.sin(degreesToRadians(latLng.lat)), -0.9999, 0.9999)
         point.y = origin.y + 0.5 * math.log((1 + siny) / (1.0 - siny)) * \
             -self.pixelsPerLonRadian_
@@ -69,7 +70,18 @@ class MercatorProjection:
                                math.pi / 2.0)
         return LatLng(lat, lng)
 
-# pixelCoordinate = worldCoordinate * pow(2,zoomLevel)
+
+def getPoint(point, center, zoom, mapWidth, mapHeight):
+    scale = 2.0**zoom
+    proj = MercatorProjection()
+    centerP = proj.fromLatLngToPoint(center)
+    centerP.x = centerP.x * scale
+    centerP.y = centerP.y * scale
+    subjectP = proj.fromLatLngToPoint(point)
+    subjectP.x = subjectP.x * scale
+    subjectP.y = subjectP.y * scale
+    return Point((subjectP.x - centerP.x) + mapWidth / 2.0,
+                 (subjectP.y - centerP.y) + mapHeight / 2.0)
 
 
 def getCorners(center, zoom, mapWidth, mapHeight):
@@ -87,4 +99,18 @@ def getCorners(center, zoom, mapWidth, mapHeight):
         'E': NELatLon.lng,
         'S': SWLatLon.lat,
         'W': SWLatLon.lng,
+    }
+
+
+# https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
+
+def getTileXY(latLng, zoom):
+    lat_rad = math.radians(latLng.lat)
+    n = 2.0 ** zoom
+    xtile = (latLng.lng + 180.0) / 360.0 * n
+    ytile = ((1.0 - math.log(math.tan(lat_rad) +
+             (1 / math.cos(lat_rad))) / math.pi) / 2.0 * n)
+    return {
+        'X': xtile,
+        'Y': ytile
     }

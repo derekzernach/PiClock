@@ -22,5 +22,3 @@ All of the extra hardware (IR Remote, GPIO buttons, Temperature, LEDs) are optio
 https://github.com/n0bel/PiClock/blob/master/Documentation/Install.md
 
 Of course you can jump to the hardware guide anytime https://github.com/n0bel/PiClock/blob/master/Documentation/Hardware.md
-
- 

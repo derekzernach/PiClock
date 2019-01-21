@@ -7,8 +7,7 @@ from PyQt4.QtGui import QColor
 # completed under the RADAR section
 primary_coordinates = 52.5074559, 13.144557  # Change to your Lat/Lon
 
-wuprefix = 'http://api.wunderground.com/api/'
-wulocation = LatLng(primary_coordinates[0], primary_coordinates[1])
+location = LatLng(primary_coordinates[0], primary_coordinates[1])
 primary_location = LatLng(primary_coordinates[0], primary_coordinates[1])
 noaastream = ''
 background = 'images/berlin-at-night-mrwallpaper.jpg'
@@ -44,9 +43,7 @@ radar_refresh = 10      # minutes
 weather_refresh = 30    # minutes
 # Wind in degrees instead of cardinal 0 = cardinal, 1 = degrees
 wind_degrees = 0
-# Depreciated: use 'satellite' key in radar section, on a per radar basis
-# if this is used, all radar blocks will get satellite images
-satellite = 0
+
 
 
 # gives all text additional attributes using QT style notation
@@ -59,9 +56,9 @@ dimcolor = QColor('#000000')
 dimcolor.setAlpha(0)
 
 # Language Specific wording
-# Weather Undeground Language code
-#  (https://www.wunderground.com/weather/api/d/docs?d=language-support&MR=1)
-wuLanguage = "DL"
+# DarkSky Language code
+#  (https://darksky.net/dev/docs under lang=)
+Language = "DE"
 
 # The Python Locale for date/time (locale.setlocale)
 #  '' for default Pi Setting
@@ -86,6 +83,14 @@ LMoonPhase = " Mond Phase:"
 LInsideTemp = "Innen Temp "
 LRain = " Regen: "
 LSnow = " Schnee: "
+Lmoon1 = 'Neumond'
+Lmoon2 = 'Zunehmender Sichelmond'
+Lmoon3 = 'Zunehmender Halbmond'
+Lmoon4 = 'Zunehmender Dreiviertelmond'
+Lmoon5 = 'Vollmond '
+Lmoon6 = 'Abnehmender Dreiviertelmond'
+Lmoon7 = 'Abnehmender Halbmond'
+Lmoon8 = 'Abnehmender Sichelmond'
 
 # RADAR
 # By default, primary_location entered will be the
@@ -98,7 +103,6 @@ LSnow = " Schnee: "
 radar1 = {
     'center': primary_location,  # the center of your radar block
     'zoom': 7,  # this is a google maps zoom factor, bigger = smaller area
-    'satellite': 0,    # 1 => show satellite images (colorized IR images)
     'markers': (   # google maps markers can be overlayed
         {
             'location': primary_location,
@@ -112,7 +116,6 @@ radar1 = {
 radar2 = {
     'center': primary_location,
     'zoom': 11,
-    'satellite': 0,
     'markers': (
         {
             'location': primary_location,
@@ -126,7 +129,6 @@ radar2 = {
 radar3 = {
     'center': primary_location,
     'zoom': 7,
-    'satellite': 0,
     'markers': (
         {
             'location': primary_location,
@@ -139,7 +141,6 @@ radar3 = {
 radar4 = {
     'center': primary_location,
     'zoom': 11,
-    'satellite': 0,
     'markers': (
         {
             'location': primary_location,

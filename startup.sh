@@ -44,7 +44,7 @@ $MSG
 eval $DELAY
 if [ $? -eq 1 ]
 then
-	
+
 	echo "PiClock Cancelled"
 	exit 0
 fi
@@ -73,7 +73,7 @@ amixer  sset PCM,0 50% >/dev/null 2>&1
 # NeoPixel AmbiLights
 echo "Checking for NeoPixels Ambilight..."
 cd Leds
-python -c "import NeoPixel" >/dev/null 2>&1
+python -c "import rpi_ws281x" >/dev/null 2>&1
 if [ $? -eq 0 ]
 then
 	pgrep -f NeoAmbi.py
@@ -89,7 +89,7 @@ echo "Checking for GPIO Buttons..."
 # gpio button to keyboard input
 if [ -x Button/gpio-keys ]
 then
-	pgrep -f gpio-keys 
+	pgrep -f gpio-keys
 	if [ $? -eq 1 ]
 	then
 		echo "Starting gpio-keys Service..."

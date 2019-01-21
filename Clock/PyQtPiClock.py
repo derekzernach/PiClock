@@ -9,10 +9,10 @@ import time
 import json
 import locale
 import random
-import re
 
 from PyQt4 import QtGui, QtCore, QtNetwork
-from PyQt4.QtGui import QPixmap, QMovie, QBrush, QColor, QPainter
+from PyQt4.QtGui import QPixmap, QBrush, QColor
+from PyQt4.QtGui import QPainter, QImage, QFont
 from PyQt4.QtCore import QUrl
 from PyQt4.QtCore import Qt
 from PyQt4.QtNetwork import QNetworkReply
@@ -20,7 +20,7 @@ from PyQt4.QtNetwork import QNetworkRequest
 from subprocess import Popen
 
 sys.dont_write_bytecode = True
-from GoogleMercatorProjection import getCorners             # NOQA
+from GoogleMercatorProjection import getCorners, getPoint, getTileXY, LatLng  # NOQA
 import ApiKeys                                              # NOQA
 
 
@@ -152,6 +152,64 @@ def tempfinished():
     temp.setText(s)
 
 
+def tempm(f):
+    return (f - 32) / 1.8
+
+
+def speedm(f):
+    return f * 0.621371192
+
+
+def pressi(f):
+    return f * 0.029530
+
+
+def heightm(f):
+    return f * 25.4
+
+
+def phase(f):
+    pp = Config.Lmoon1          # 'New Moon'
+    if (f > 0.9375):
+            pp = Config.Lmoon1  # 'New Moon'
+    elif (f > 0.8125):
+            pp = Config.Lmoon8  # 'Waning Crecent'
+    elif (f > 0.6875):
+            pp = Config.Lmoon7  # 'Third Quarter'
+    elif (f > 0.5625):
+            pp = Config.Lmoon6  # 'Waning Gibbous'
+    elif (f > 0.4375):
+            pp = Config.Lmoon5  # 'Full Moon'
+    elif (f > 0.3125):
+            pp = Config.Lmoon4  # 'Waxing Gibbous'
+    elif (f > 0.1875):
+            pp = Config.Lmoon3  # 'First Quarter'
+    elif (f > 0.0625):
+            pp = Config.Lmoon2  # 'Waxing Crescent'
+    return pp
+
+
+def bearing(f):
+    wd = 'N'
+    if (f > 22.5):
+        wd = 'NE'
+    if (f > 67.5):
+        wd = 'E'
+    if (f > 112.5):
+        wd = 'SE'
+    if (f > 157.5):
+        wd = 'S'
+    if (f > 202.5):
+        wd = 'SW'
+    if (f > 247.5):
+        wd = 'W'
+    if (f > 292.5):
+        wd = 'NW'
+    if (f > 337.5):
+        wd = 'N'
+    return wd
+
+
 def gettemp():
     global tempreply
     host = 'localhost'
@@ -167,16 +225,15 @@ def wxfinished():
     global wxreply, wxdata
     global wxicon, temper, wxdesc, press, humidity
     global wind, wind2, wdate, bottom, forecast
-    global wxicon2, temper2, wxdesc
+    global wxicon2, temper2, wxdesc, attribution
+
+    attribution.setText("DarkSky.net")
+    attribution2.setText("DarkSky.net")
 
     wxstr = str(wxreply.readAll())
     wxdata = json.loads(wxstr)
-    f = wxdata['current_observation']
-    iconurl = f['icon_url']
-    icp = ''
-    if (re.search('/nt_', iconurl)):
-        icp = 'n_'
-    wxiconpixmap = QtGui.QPixmap(Config.icons + "/" + icp + f['icon'] + ".png")
+    f = wxdata['currently']
+    wxiconpixmap = QtGui.QPixmap(Config.icons + "/" + f['icon'] + ".png")
     wxicon.setPixmap(wxiconpixmap.scaled(
         wxicon.width(), wxicon.height(), Qt.IgnoreAspectRatio,
         Qt.SmoothTransformation))
@@ -185,98 +242,110 @@ def wxfinished():
         wxicon.height(),
         Qt.IgnoreAspectRatio,
         Qt.SmoothTransformation))
-    wxdesc.setText(f['weather'])
-    wxdesc2.setText(f['weather'])
+    wxdesc.setText(f['summary'])
+    wxdesc2.setText(f['summary'])
 
     if Config.metric:
-        temper.setText(str(f['temp_c']) + u'°C')
-        temper2.setText(str(f['temp_c']) + u'°C')
-        press.setText(Config.LPressure +
-                      f['pressure_mb'] + ' ' + f['pressure_trend'])
-        humidity.setText(Config.LHumidity + f['relative_humidity'])
-        wd = f['wind_dir']
+        temper.setText('%.1f' % (tempm(f['temperature'])) + u'°C')
+        temper2.setText('%.1f' % (tempm(f['temperature'])) + u'°C')
+        press.setText(Config.LPressure + '%.1f' % f['pressure'])
+        humidity.setText(Config.LHumidity + '%.0f%%' % (f['humidity']*100.0))
+        wd = bearing(f['windBearing'])
         if Config.wind_degrees:
-            wd = str(f['wind_degrees']) + u'°'
+            wd = str(f['windBearing']) + u'°'
         wind.setText(Config.LWind +
                      wd + ' ' +
-                     str(f['wind_kph']) +
+                     '%.1f' % (speedm(f['windSpeed'])) +
                      Config.Lgusting +
-                     str(f['wind_gust_kph']))
-        wind2.setText(Config.LFeelslike + str(f['feelslike_c']))
+                     '%.1f' % (speedm(f['windGust'])))
+        wind2.setText(Config.LFeelslike +
+                      '%.1f' % (tempm(f['apparentTemperature'])))
         wdate.setText("{0:%H:%M}".format(datetime.datetime.fromtimestamp(
-            int(f['local_epoch']))) +
-            Config.LPrecip1hr + f['precip_1hr_metric'] + 'mm ' +
-            Config.LToday + f['precip_today_metric'] + 'mm')
+            int(f['time']))))
+# Config.LPrecip1hr + f['precip_1hr_metric'] + 'mm ' +
+# Config.LToday + f['precip_today_metric'] + 'mm')
     else:
-        temper.setText(str(f['temp_f']) + u'°F')
-        temper2.setText(str(f['temp_f']) + u'°F')
-        press.setText(Config.LPressure +
-                      f['pressure_in'] + ' ' + f['pressure_trend'])
-        humidity.setText(Config.LHumidity + f['relative_humidity'])
-        wd = f['wind_dir']
+        temper.setText('%.1f' % (f['temperature']) + u'°F')
+        temper2.setText('%.1f' % (f['temperature']) + u'°F')
+        press.setText(Config.LPressure + '%.2f' % pressi(f['pressure']))
+        humidity.setText(Config.LHumidity + '%.0f%%' % (f['humidity']*100.0))
+        wd = bearing(f['windBearing'])
         if Config.wind_degrees:
             wd = str(f['wind_degrees']) + u'°'
         wind.setText(Config.LWind + wd + ' ' +
-                     str(f['wind_mph']) + Config.Lgusting +
-                     str(f['wind_gust_mph']))
-        wind2.setText(Config.LFeelslike + str(f['feelslike_f']))
+                     '%.1f' % (f['windSpeed']) + Config.Lgusting +
+                     '%.1f' % (f['windGust']))
+        wind2.setText(Config.LFeelslike + '%.1f' % (f['apparentTemperature']))
         wdate.setText("{0:%H:%M}".format(datetime.datetime.fromtimestamp(
-            int(f['local_epoch']))) +
-            Config.LPrecip1hr + f['precip_1hr_in'] + 'in ' +
-            Config.LToday + f['precip_today_in'] + 'in')
+            int(f['time']))))
+# Config.LPrecip1hr + f['precip_1hr_in'] + 'in ' +
+# Config.LToday + f['precip_today_in'] + 'in')
 
-    bottom.setText(Config.LSunRise +
-                   wxdata['sun_phase']['sunrise']['hour'] + ':' +
-                   wxdata['sun_phase']['sunrise']['minute'] +
-                   Config.LSet +
-                   wxdata['sun_phase']['sunset']['hour'] + ':' +
-                   wxdata['sun_phase']['sunset']['minute'] +
-                   Config.LMoonPhase +
-                   wxdata['moon_phase']['phaseofMoon']
-                   )
+    bottomText = ""
+    if "sunriseTime" in wxdata["daily"]["data"][0]:
+        bottomText += (Config.LSunRise +
+                       "{0:%H:%M}".format(datetime.datetime.fromtimestamp(
+                        wxdata["daily"]["data"][0]["sunriseTime"])) +
+                       Config.LSet +
+                       "{0:%H:%M}".format(datetime.datetime.fromtimestamp(
+                        wxdata["daily"]["data"][0]["sunsetTime"])))
+
+    if "moonPhase" in wxdata["daily"]["data"][0]:
+        bottomText += (Config.LMoonPhase +
+                       phase(wxdata["daily"]["data"][0]["moonPhase"]))
+
+    bottom.setText(bottomText)
 
     for i in range(0, 3):
-        f = wxdata['hourly_forecast'][i * 3 + 2]
+        f = wxdata['hourly']['data'][i * 3 + 2]
         fl = forecast[i]
-        iconurl = f['icon_url']
-        icp = ''
-        if (re.search('/nt_', iconurl)):
-            icp = 'n_'
         icon = fl.findChild(QtGui.QLabel, "icon")
         wxiconpixmap = QtGui.QPixmap(
-            Config.icons + "/" + icp + f['icon'] + ".png")
+            Config.icons + "/" + f['icon'] + ".png")
         icon.setPixmap(wxiconpixmap.scaled(
             icon.width(),
             icon.height(),
             Qt.IgnoreAspectRatio,
             Qt.SmoothTransformation))
         wx = fl.findChild(QtGui.QLabel, "wx")
-        wx.setText(f['condition'])
         day = fl.findChild(QtGui.QLabel, "day")
-        day.setText(f['FCTTIME']['weekday_name'] + ' ' + f['FCTTIME']['civil'])
-        wx2 = fl.findChild(QtGui.QLabel, "wx2")
+        day.setText("{0:%A %I:%M%p}".format(datetime.datetime.fromtimestamp(
+            int(f['time']))))
         s = ''
-        if float(f['pop']) > 0.0:
-            s += f['pop'] + '% '
-        if Config.metric:
-            if float(f['snow']['metric']) > 0.0:
-                s += Config.LSnow + f['snow']['metric'] + 'mm '
-            else:
-                if float(f['qpf']['metric']) > 0.0:
-                    s += Config.LRain + f['qpf']['metric'] + 'mm '
-            s += f['temp']['metric'] + u'°C'
-        else:
-            if float(f['snow']['english']) > 0.0:
-                s += Config.LSnow + f['snow']['english'] + 'in '
-            else:
-                if float(f['qpf']['english']) > 0.0:
-                    s += Config.LRain + f['qpf']['english'] + 'in '
-            s += f['temp']['english'] + u'°F'
+        pop = 0
+        ptype = ''
+        paccum = 0
+        if ('precipProbability' in f):
+            pop = float(f['precipProbability']) * 100.0
+        if ('precipAccumulation' in f):
+            paccum = float(f['precipAccumulation'])
+        if ('precipType' in f):
+            ptype = f['precipType']
 
-        wx2.setText(s)
+        if (pop > 0.0 or ptype != ''):
+            s += '%.0f' % pop + '% '
+        if Config.metric:
+            if (ptype == 'snow'):
+                if (paccum > 0.05):
+                    s += Config.LSnow + '%.0f' % heightm(paccum) + 'mm '
+            else:
+                if (paccum > 0.05):
+                    s += Config.LRain + '%.0f' % heightm(paccum) + 'mm '
+            s += '%.0f' % tempm(f['temperature']) + u'°C'
+        else:
+            if (ptype == 'snow'):
+                if (paccum > 0.05):
+                    s += Config.LSnow + '%.0f' % paccum + 'in '
+            else:
+                if (paccum > 0.05):
+                    s += Config.LRain + '%.0f' % paccum + 'in '
+            s += '%.0f' % (f['temperature']) + u'°F'
+
+        wx.setStyleSheet("#wx { font-size: " + str(int(25 * xscale)) + "px; }")
+        wx.setText(f['summary'] + "\n" + s)
 
     for i in range(3, 9):
-        f = wxdata['forecast']['simpleforecast']['forecastday'][i - 3]
+        f = wxdata['daily']['data'][i - 3]
         fl = forecast[i]
         icon = fl.findChild(QtGui.QLabel, "icon")
         wxiconpixmap = QtGui.QPixmap(Config.icons + "/" + f['icon'] + ".png")
@@ -286,42 +355,56 @@ def wxfinished():
             Qt.IgnoreAspectRatio,
             Qt.SmoothTransformation))
         wx = fl.findChild(QtGui.QLabel, "wx")
-        wx.setText(f['conditions'])
         day = fl.findChild(QtGui.QLabel, "day")
-        day.setText(f['date']['weekday'])
-        wx2 = fl.findChild(QtGui.QLabel, "wx2")
+        day.setText("{0:%A}".format(datetime.datetime.fromtimestamp(
+            int(f['time']))))
         s = ''
-        if float(f['pop']) > 0.0:
-            s += str(f['pop']) + '% '
+        pop = 0
+        ptype = ''
+        paccum = 0
+        if ('precipProbability' in f):
+            pop = float(f['precipProbability']) * 100.0
+        if ('precipAccumulation' in f):
+            paccum = float(f['precipAccumulation'])
+        if ('precipType' in f):
+            ptype = f['precipType']
+
+        if (pop > 0.05 or ptype != ''):
+            s += '%.0f' % pop + '% '
         if Config.metric:
-            if float(f['snow_allday']['cm']) > 0.0:
-                s += Config.LSnow + str(f['snow_allday']['cm']) + 'cm '
+            if (ptype == 'snow'):
+                if (paccum > 0.05):
+                    s += Config.LSnow + '%.0f' % heightm(paccum) + 'mm '
             else:
-                if float(f['qpf_allday']['mm']) > 0.0:
-                    s += Config.LRain + str(f['qpf_allday']['mm']) + 'mm '
-            s += str(f['high']['celsius']) + '/' + \
-                str(f['low']['celsius']) + u'°C'
+                if (paccum > 0.05):
+                    s += Config.LRain + '%.0f' % heightm(paccum) + 'mm '
+            s += '%.0f' % tempm(f['temperatureHigh']) + '/' + \
+                 '%.0f' % tempm(f['temperatureLow'])
         else:
-            if float(f['snow_allday']['in']) > 0.0:
-                s += Config.LSnow + str(f['snow_allday']['in']) + 'in '
+            if (ptype == 'snow'):
+                if (paccum > 0.05):
+                    s += Config.LSnow + '%.1f' % paccum + 'in '
             else:
-                if float(f['qpf_allday']['in']) > 0.0:
-                    s += Config.LRain + str(f['qpf_allday']['in']) + 'in '
-            s += str(f['high']['fahrenheit']) + '/' + \
-                str(f['low']['fahrenheit']) + u'°F'
-        wx2.setText(s)
+                if (paccum > 0.05):
+                    s += Config.LRain + '%.1f' % paccum + 'in '
+            s += '%.0f' % f['temperatureHigh'] + '/' + \
+                 '%.0f' % f['temperatureLow']
+
+        wx.setStyleSheet("#wx { font-size: " + str(int(19 * xscale)) + "px; }")
+        wx.setText(f['summary'] + "\n" + s)
 
 
 def getwx():
     global wxurl
     global wxreply
     print "getting current and forecast:" + time.ctime()
-    wxurl = Config.wuprefix + ApiKeys.wuapi + \
-        '/conditions/astronomy/hourly10day/forecast10day/lang:' + \
-        Config.wuLanguage + '/q/'
-    wxurl += str(Config.wulocation.lat) + ',' + \
-        str(Config.wulocation.lng) + '.json'
-    wxurl += '?r=' + str(random.random())
+    wxurl = 'https://api.darksky.net/forecast/' + \
+        ApiKeys.dsapi + \
+        '/'
+    wxurl += str(Config.location.lat) + ',' + \
+        str(Config.location.lng)
+    wxurl += '?units=us&lang=' + Config.Language.lower()
+    wxurl += '&r=' + str(random.random())
     print wxurl
     r = QUrl(wxurl)
     r = QNetworkRequest(r)
@@ -372,21 +455,35 @@ class Radar(QtGui.QLabel):
         global xscale, yscale
         self.myname = myname
         self.rect = rect
-        self.satellite = Config.satellite
-        try:
-            if radar["satellite"]:
-                self.satellite = 1
-        except KeyError:
-            pass
-        self.baseurl = self.mapurl(radar, rect, False)
-        print "google map base url: " + self.baseurl
-        self.mkurl = self.mapurl(radar, rect, True)
-        self.wxurl = self.radarurl(radar, rect)
-        print "radar url: " + self.wxurl
+        self.anim = 5
+        self.zoom = radar["zoom"]
+        self.point = radar["center"]
+        self.radar = radar
+        self.baseurl = self.mapurl(radar, rect)
+        print "map base url: " + self.baseurl
         QtGui.QLabel.__init__(self, parent)
         self.interval = Config.radar_refresh * 60
         self.lastwx = 0
         self.retries = 0
+        self.corners = getCorners(self.point, self.zoom,
+                                  rect.width(), rect.height())
+        self.baseTime = 0
+        self.cornerTiles = {
+         "NW": getTileXY(LatLng(self.corners["N"],
+                                self.corners["W"]), self.zoom),
+         "NE": getTileXY(LatLng(self.corners["N"],
+                                self.corners["E"]), self.zoom),
+         "SE": getTileXY(LatLng(self.corners["S"],
+                                self.corners["E"]), self.zoom),
+         "SW": getTileXY(LatLng(self.corners["S"],
+                                self.corners["W"]), self.zoom)
+        }
+        self.tiles = []
+        self.tiletails = []
+        self.totalWidth = 0
+        self.totalHeight = 0
+        self.tilesWidth = 0
+        self.tilesHeight = 0
 
         self.setObjectName("radar")
         self.setGeometry(rect)
@@ -403,12 +500,169 @@ class Radar(QtGui.QLabel):
         self.wmk.setStyleSheet("#mk { background-color: transparent; }")
         self.wmk.setGeometry(0, 0, rect.width(), rect.height())
 
-        self.wxmovie = QMovie()
+        for y in range(int(self.cornerTiles["NW"]["Y"]),
+                       int(self.cornerTiles["SW"]["Y"])+1):
+            self.totalHeight += 256
+            self.tilesHeight += 1
+            for x in range(int(self.cornerTiles["NW"]["X"]),
+                           int(self.cornerTiles["NE"]["X"])+1):
+                tile = {"X": x, "Y": y}
+                self.tiles.append(tile)
+                tail = "/256/%d/%d/%d.png?color=3" % (self.zoom, x, y)
+                self.tiletails.append(tail)
+        for x in range(int(self.cornerTiles["NW"]["X"]),
+                       int(self.cornerTiles["NE"]["X"])+1):
+            self.totalWidth += 256
+            self.tilesWidth += 1
+        self.frameImages = []
+        self.frameIndex = 0
+        self.displayedFrame = 0
+        self.ticker = 0
+        self.lastget = 0
 
-    def mapurl(self, radar, rect, markersonly):
-        # 'https://maps.googleapis.com/maps/api/staticmap?maptype=hybrid&center='+rcenter.lat+','+rcenter.lng+'&zoom='+rzoom+'&size=300x275'+markersr;
+    def rtick(self):
+        if time.time() > (self.lastget + self.interval):
+            self.get(time.time())
+            self.lastget = time.time()
+        if len(self.frameImages) < 1:
+            return
+        if self.displayedFrame == 0:
+            self.ticker += 1
+            if self.ticker < 5:
+                return
+        self.ticker = 0
+        f = self.frameImages[self.displayedFrame]
+        self.wwx.setPixmap(f["image"])
+        self.displayedFrame += 1
+        if self.displayedFrame >= len(self.frameImages):
+            self.displayedFrame = 0
+
+    def get(self, t=0):
+        t = int(t / 600)*600
+        if t > 0 and self.baseTime == t:
+            return
+        if t == 0:
+            t = self.baseTime
+        else:
+            self.baseTime = t
+        newf = []
+        for f in self.frameImages:
+            if f["time"] >= (t - self.anim * 600):
+                newf.append(f)
+        self.frameImages = newf
+        firstt = t - self.anim * 600
+        for tt in range(firstt, t+1, 600):
+            print "get... " + str(tt) + " " + self.myname
+            gotit = False
+            for f in self.frameImages:
+                if f["time"] == tt:
+                    gotit = True
+            if not gotit:
+                self.getTiles(tt)
+                break
+
+    def getTiles(self, t, i=0):
+        t = int(t / 600)*600
+        self.getTime = t
+        self.getIndex = i
+        if i == 0:
+            self.tileurls = []
+            self.tileQimages = []
+            for tt in self.tiletails:
+                tileurl = "https://tilecache.rainviewer.com/v2/radar/%d/%s" \
+                    % (t, tt)
+                self.tileurls.append(tileurl)
+        print self.myname + " " + str(self.getIndex) + " " + self.tileurls[i]
+        self.tilereq = QNetworkRequest(QUrl(self.tileurls[i]))
+        self.tilereply = manager.get(self.tilereq)
+        QtCore.QObject.connect(self.tilereply, QtCore.SIGNAL(
+                "finished()"), self.getTilesReply)
+
+    def getTilesReply(self):
+        print "getTilesReply " + str(self.getIndex)
+        if self.tilereply.error() != QNetworkReply.NoError:
+                return
+        self.tileQimages.append(QImage())
+        self.tileQimages[self.getIndex].loadFromData(self.tilereply.readAll())
+        self.getIndex = self.getIndex + 1
+        if self.getIndex < len(self.tileurls):
+            self.getTiles(self.getTime, self.getIndex)
+        else:
+            self.combineTiles()
+            self.get()
+
+    def combineTiles(self):
+        global radar1
+        ii = QImage(self.tilesWidth*256, self.tilesHeight*256,
+                    QImage.Format_ARGB32)
+        painter = QPainter()
+        painter.begin(ii)
+        painter.setPen(QColor(255, 255, 255, 255))
+        painter.setFont(QFont("Arial", 10))
+        i = 0
+        xo = self.cornerTiles["NW"]["X"]
+        xo = int((int(xo) - xo)*256)
+        yo = self.cornerTiles["NW"]["Y"]
+        yo = int((int(yo) - yo)*256)
+        for y in range(0, self.totalHeight, 256):
+            for x in range(0, self.totalWidth, 256):
+                painter.drawImage(x, y, self.tileQimages[i])
+                # painter.drawRect(x, y, 255, 255)
+                # painter.drawText(x+3, y+12, self.tiletails[i])
+                i += 1
+        painter.end()
+        painter = None
+        self.tileQimages = []
+        ii2 = ii.copy(-xo, -yo, self.rect.width(), self.rect.height())
+        ii = None
+        painter2 = QPainter()
+        painter2.begin(ii2)
+        timestamp = "{0:%H:%M} RainView.com".format(
+                    datetime.datetime.fromtimestamp(self.getTime))
+        painter2.setPen(QColor(63, 63, 63, 255))
+        painter2.setFont(QFont("Arial", 8))
+        painter2.setRenderHint(QPainter.TextAntialiasing)
+        painter2.drawText(3-1, 12-1, timestamp)
+        painter2.drawText(3+2, 12+1, timestamp)
+        painter2.setPen(QColor(255, 255, 255, 255))
+        painter2.drawText(3, 12, timestamp)
+        painter2.drawText(3+1, 12, timestamp)
+        painter2.end()
+        painter2 = None
+        ii3 = QPixmap(ii2)
+        ii2 = None
+        self.frameImages.append({"time": self.getTime, "image": ii3})
+        ii3 = None
+
+    def mapurl(self, radar, rect):
+        mb = 0
+        try:
+            mb = Config.usemapbox
+        except:
+            pass
+        if mb:
+            return self.mapboxurl(radar, rect)
+        else:
+            return self.googlemapurl(radar, rect)
+
+    def mapboxurl(self, radar, rect):
+        #  note we're using google maps zoom factor.
+        #  Mapbox equivilant zoom is one less
+        #  They seem to be using 512x512 tiles instead of 256x256
+        style = 'mapbox/satellite-streets-v10'
+        if 'style' in radar:
+            style = radar['style']
+        return 'https://api.mapbox.com/styles/v1/' + \
+               style + \
+               '/static/' + \
+               str(radar['center'].lng) + ',' + \
+               str(radar['center'].lat) + ',' + \
+               str(radar['zoom']-1) + ',0,0/' + \
+               str(rect.width()) + 'x' + str(rect.height()) + \
+               '?access_token=' + ApiKeys.mbapi
+
+    def googlemapurl(self, radar, rect):
         urlp = []
-
         if len(ApiKeys.googleapi) > 0:
             urlp.append('key=' + ApiKeys.googleapi)
         urlp.append(
@@ -421,59 +675,10 @@ class Radar(QtGui.QLabel):
             zoom -= 1
         urlp.append('zoom=' + str(zoom))
         urlp.append('size=' + str(rsize.width()) + 'x' + str(rsize.height()))
-        if markersonly:
-            urlp.append('style=visibility:off')
-        else:
-            urlp.append('maptype=hybrid')
-        for marker in radar['markers']:
-            marks = []
-            for opts in marker:
-                if opts != 'location':
-                    marks.append(opts + ':' + marker[opts])
-            marks.append(str(marker['location'].lat) +
-                         ',' + str(marker['location'].lng))
-            urlp.append('markers=' + '|'.join(marks))
+        urlp.append('maptype=hybrid')
 
         return 'http://maps.googleapis.com/maps/api/staticmap?' + \
             '&'.join(urlp)
-
-    def radarurl(self, radar, rect):
-        # wuprefix = 'http://api.wunderground.com/api/';
-        # wuprefix+wuapi+'/animatedradar/image.gif?maxlat='+rNE.lat+'&maxlon='+
-        #       rNE.lng+'&minlat='+rSW.lat+'&minlon='+rSW.lng+wuoptionsr;
-        # wuoptionsr = '&width=300&height=275&newmaps=0&reproj.automerc=1&num=5
-        #       &delay=25&timelabel=1&timelabel.y=10&rainsnow=1&smooth=1';
-        rr = getCorners(radar['center'], radar['zoom'],
-                        rect.width(), rect.height())
-        if self.satellite:
-            return (Config.wuprefix + ApiKeys.wuapi +
-                    '/animatedsatellite/lang:' +
-                    Config.wuLanguage +
-                    '/image.gif' +
-                    '?maxlat=' + str(rr['N']) +
-                    '&maxlon=' + str(rr['E']) +
-                    '&minlat=' + str(rr['S']) +
-                    '&minlon=' + str(rr['W']) +
-                    '&width=' + str(rect.width()) +
-                    '&height=' + str(rect.height()) +
-                    '&newmaps=0&reproj.automerc=1&num=5&delay=25' +
-                    '&timelabel=1&timelabel.y=10&smooth=1&key=sat_ir4_bottom'
-                    )
-        else:
-            return (Config.wuprefix +
-                    ApiKeys.wuapi +
-                    '/animatedradar/lang:' +
-                    Config.wuLanguage + '/image.gif' +
-                    '?maxlat=' + str(rr['N']) +
-                    '&maxlon=' + str(rr['E']) +
-                    '&minlat=' + str(rr['S']) +
-                    '&minlon=' + str(rr['W']) +
-                    '&width=' + str(rect.width()) +
-                    '&height=' + str(rect.height()) +
-                    '&newmaps=0&reproj.automerc=1&num=5&delay=25' +
-                    '&timelabel=1&timelabel.y=10&rainsnow=1&smooth=1' +
-                    '&radar_bitmap=1&xnoclutter=1&xnoclutter_mask=1&cors=1'
-                    )
 
     def basefinished(self):
         if self.basereply.error() != QNetworkReply.NoError:
@@ -484,101 +689,55 @@ class Radar(QtGui.QLabel):
             self.basepixmap = self.basepixmap.scaled(self.rect.size(),
                                                      Qt.KeepAspectRatio,
                                                      Qt.SmoothTransformation)
-        if self.satellite:
-            p = QPixmap(self.basepixmap.size())
-            p.fill(Qt.transparent)
-            painter = QPainter()
-            painter.begin(p)
-            painter.setOpacity(0.6)
-            painter.drawPixmap(0, 0, self.basepixmap)
-            painter.end()
-            self.basepixmap = p
-            self.wwx.setPixmap(self.basepixmap)
-        else:
-            self.setPixmap(self.basepixmap)
+        self.setPixmap(self.basepixmap)
 
-    def mkfinished(self):
-        if self.mkreply.error() != QNetworkReply.NoError:
-            return
-        self.mkpixmap = QPixmap()
-        self.mkpixmap.loadFromData(self.mkreply.readAll())
-        if self.mkpixmap.size() != self.rect.size():
-            self.mkpixmap = self.mkpixmap.scaled(
-                self.rect.size(),
-                Qt.KeepAspectRatio,
-                Qt.SmoothTransformation)
+        # make marker pixmap
+        self.mkpixmap = QPixmap(self.basepixmap.size())
+        self.mkpixmap.fill(Qt.transparent)
         br = QBrush(QColor(Config.dimcolor))
         painter = QPainter()
         painter.begin(self.mkpixmap)
         painter.fillRect(0, 0, self.mkpixmap.width(),
                          self.mkpixmap.height(), br)
+        for marker in self.radar['markers']:
+            pt = getPoint(marker["location"], self.point, self.zoom,
+                          self.rect.width(), self.rect.height())
+            mk2 = QImage()
+            mkfile = 'teardrop'
+            if 'image' in marker:
+                mkfile = marker['image']
+            if os.path.dirname(mkfile) == '':
+                mkfile = os.path.join('markers', mkfile)
+            if os.path.splitext(mkfile)[1] == '':
+                mkfile += '.png'
+            mk2.load(mkfile)
+            if mk2.format != QImage.Format_ARGB32:
+                mk2 = mk2.convertToFormat(QImage.Format_ARGB32)
+            mkh = 80  # self.rect.height() / 5
+            if 'size' in marker:
+                if marker['size'] == 'small':
+                    mkh = 64
+                if marker['size'] == 'mid':
+                    mkh = 70
+                if marker['size'] == 'tiny':
+                    mkh = 40
+            if 'color' in marker:
+                c = QColor(marker['color'])
+                (cr, cg, cb, ca) = c.getRgbF()
+                for x in range(0, mk2.width()):
+                    for y in range(0, mk2.height()):
+                        (r, g, b, a) = QColor.fromRgba(
+                                       mk2.pixel(x, y)).getRgbF()
+                        r = r * cr
+                        g = g * cg
+                        b = b * cb
+                        mk2.setPixel(x, y, QColor.fromRgbF(r, g, b, a).rgba())
+            mk2 = mk2.scaledToHeight(mkh, 1)
+            painter.drawImage(pt.x-mkh/2, pt.y-mkh/2, mk2)
+
         painter.end()
+
         self.wmk.setPixmap(self.mkpixmap)
-
-    def wxfinished(self):
-        if self.wxreply.error() != QNetworkReply.NoError:
-            print "get radar error " + self.myname + ":" + \
-                str(self.wxreply.error())
-            self.lastwx = 0
-            return
-        print "radar map received:" + self.myname + ":" + time.ctime()
-        self.wxmovie.stop()
-        self.wxdata = QtCore.QByteArray(self.wxreply.readAll())
-        self.wxbuff = QtCore.QBuffer(self.wxdata)
-        self.wxbuff.open(QtCore.QIODevice.ReadOnly)
-        mov = QMovie(self.wxbuff, 'GIF')
-        print "radar map frame count:" + self.myname + ":" + \
-            str(mov.frameCount()) + ":r" + str(self.retries)
-        if mov.frameCount() > 2:
-            self.lastwx = time.time()
-            self.retries = 0
-        else:
-            # radar image retreval failed
-            if self.retries > 3:
-                # give up, last successful animation stays.
-                # the next normal radar_refresh time (default 10min) will apply
-                self.lastwx = time.time()
-                return
-
-            self.lastwx = 0
-            # count retries
-            self.retries = self.retries + 1
-            # retry in 5 seconds
-            QtCore.QTimer.singleShot(5 * 1000, self.getwx)
-            return
-        self.wxmovie = mov
-        if self.satellite:
-            self.setMovie(self.wxmovie)
-        else:
-            self.wwx.setMovie(self.wxmovie)
-        if self.parent().isVisible():
-            self.wxmovie.start()
-
-    def getwx(self):
-        global lastapiget
-        i = 0.1
-        # making sure there is at least 2 seconds between radar api calls
-        lastapiget += 2
-        if time.time() > lastapiget:
-            lastapiget = time.time()
-        else:
-            i = lastapiget - time.time()
-        print "get radar api call spacing oneshot get i=" + str(i)
-        QtCore.QTimer.singleShot(i * 1000, self.getwx2)
-
-    def getwx2(self):
-        global manager
-        try:
-            if self.wxreply.isRunning():
-                return
-        except Exception:
-            pass
-        print "getting radar map " + self.myname + ":" + time.ctime()
-        self.wxreq = QNetworkRequest(
-            QUrl(self.wxurl + '&rrrand=' + str(time.time())))
-        self.wxreply = manager.get(self.wxreq)
-        QtCore.QObject.connect(self.wxreply, QtCore.SIGNAL(
-            "finished()"), self.wxfinished)
 
     def getbase(self):
         global manager
@@ -587,44 +746,26 @@ class Radar(QtGui.QLabel):
         QtCore.QObject.connect(self.basereply, QtCore.SIGNAL(
             "finished()"), self.basefinished)
 
-    def getmk(self):
-        global manager
-        self.mkreq = QNetworkRequest(QUrl(self.mkurl))
-        self.mkreply = manager.get(self.mkreq)
-        QtCore.QObject.connect(self.mkreply, QtCore.SIGNAL(
-            "finished()"), self.mkfinished)
-
     def start(self, interval=0):
         if interval > 0:
             self.interval = interval
         self.getbase()
-        self.getmk()
         self.timer = QtCore.QTimer()
-        QtCore.QObject.connect(
-            self.timer, QtCore.SIGNAL("timeout()"), self.getwx)
+        self.timer.timeout.connect(self.rtick)
+        self.lastget = time.time() - self.interval + random.uniform(3, 10)
 
     def wxstart(self):
         print "wxstart for " + self.myname
-        if (self.lastwx == 0 or (self.lastwx + self.interval) < time.time()):
-            self.getwx()
-        # random 1 to 10 seconds added to refresh interval to spread the
-        # queries over time
-        i = (self.interval + random.uniform(1, 10)) * 1000
-        self.timer.start(i)
-        self.wxmovie.start()
-        QtCore.QTimer.singleShot(1000, self.wxmovie.start)
+        self.timer.start(200)
 
     def wxstop(self):
         print "wxstop for " + self.myname
         self.timer.stop()
-        self.wxmovie.stop()
 
     def stop(self):
         try:
             self.timer.stop()
             self.timer = None
-            if self.wxmovie:
-                self.wxmovie.stop()
         except Exception:
             pass
 
@@ -703,6 +844,7 @@ class myMain(QtGui.QWidget):
         if type(event) == QtGui.QMouseEvent:
             nextframe(1)
 
+
 configname = 'Config'
 
 if len(sys.argv) > 1:
@@ -715,6 +857,11 @@ if not os.path.isfile(configname + ".py"):
 Config = __import__(configname)
 
 # define default values for new/optional config variables.
+
+try:
+    Config.location
+except AttributeError:
+    Config.location = Config.wulocation
 
 try:
     Config.metric
@@ -753,19 +900,21 @@ except AttributeError:
     Config.wind_degrees = 0
 
 try:
-    Config.satellite
-except AttributeError:
-    Config.satellite = 0
-
-try:
     Config.digital
 except AttributeError:
     Config.digital = 0
 
 try:
+    Config.Language
+except AttributeError:
+    try:
+        Config.Language = Config.wuLanguage
+    except AttributeError:
+        Config.Language = "en"
+
+try:
     Config.LPressure
 except AttributeError:
-    Config.wuLanguage = "EN"
     Config.LPressure = "Pressure "
     Config.LHumidity = "Humidity "
     Config.LWind = "Wind "
@@ -779,7 +928,33 @@ except AttributeError:
     Config.LInsideTemp = "Inside Temp "
     Config.LRain = " Rain: "
     Config.LSnow = " Snow: "
+
+try:
+    Config.Lmoon1
+    Config.Lmoon2
+    Config.Lmoon3
+    Config.Lmoon4
+    Config.Lmoon5
+    Config.Lmoon6
+    Config.Lmoon7
+    Config.Lmoon8
+except AttributeError:
+    Config.Lmoon1 = 'New Moon'
+    Config.Lmoon2 = 'Waxing Crescent'
+    Config.Lmoon3 = 'First Quarter'
+    Config.Lmoon4 = 'Waxing Gibbous'
+    Config.Lmoon5 = 'Full Moon'
+    Config.Lmoon6 = 'Waning Gibbous'
+    Config.Lmoon7 = 'Third Quarter'
+    Config.Lmoon8 = 'Waning Crecent'
+
 #
+# Check if Mapbox API key is set, and use mapbox if so
+try:
+    if ApiKeys.mbapi[:3].lower() == "pk.":
+        Config.usemapbox = 1
+except AttributeError:
+    pass
 
 
 lastmin = -1
@@ -962,11 +1137,37 @@ datey2.setStyleSheet("#datey2 { font-family:sans-serif; color: " +
 datey2.setAlignment(Qt.AlignHCenter | Qt.AlignTop)
 datey2.setGeometry(800 * xscale, 840 * yscale, 640 * xscale, 100)
 
+attribution = QtGui.QLabel(frame1)
+attribution.setObjectName("attribution")
+attribution.setStyleSheet("#attribution { " +
+                          " background-color: transparent; color: " +
+                          Config.textcolor +
+                          "; font-size: " +
+                          str(int(12 * xscale)) +
+                          "px; " +
+                          Config.fontattr +
+                          "}")
+attribution.setAlignment(Qt.AlignTop)
+attribution.setGeometry(6 * xscale, 3 * yscale, 100 * xscale, 100)
+
 ypos = -25
 wxicon = QtGui.QLabel(frame1)
 wxicon.setObjectName("wxicon")
 wxicon.setStyleSheet("#wxicon { background-color: transparent; }")
 wxicon.setGeometry(75 * xscale, ypos * yscale, 150 * xscale, 150 * yscale)
+
+attribution2 = QtGui.QLabel(frame2)
+attribution2.setObjectName("attribution2")
+attribution2.setStyleSheet("#attribution2 { " +
+                           "background-color: transparent; color: " +
+                           Config.textcolor +
+                           "; font-size: " +
+                           str(int(12 * xscale)) +
+                           "px; " +
+                           Config.fontattr +
+                           "}")
+attribution2.setAlignment(Qt.AlignTop)
+attribution2.setGeometry(6 * xscale, 880 * yscale, 100 * xscale, 100)
 
 wxicon2 = QtGui.QLabel(frame2)
 wxicon2.setObjectName("wxicon2")
@@ -1134,15 +1335,10 @@ for i in range(0, 9):
 
     wx = QtGui.QLabel(lab)
     wx.setStyleSheet("#wx { background-color: transparent; }")
-    wx.setGeometry(100 * xscale, 10 * yscale, 200 * xscale, 20 * yscale)
+    wx.setGeometry(100 * xscale, 5 * yscale, 200 * xscale, 120 * yscale)
+    wx.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+    wx.setWordWrap(True)
     wx.setObjectName("wx")
-
-    wx2 = QtGui.QLabel(lab)
-    wx2.setStyleSheet("#wx2 { background-color: transparent; }")
-    wx2.setGeometry(100 * xscale, 30 * yscale, 200 * xscale, 100 * yscale)
-    wx2.setAlignment(Qt.AlignLeft | Qt.AlignTop)
-    wx2.setWordWrap(True)
-    wx2.setObjectName("wx2")
 
     day = QtGui.QLabel(lab)
     day.setStyleSheet("#day { background-color: transparent; }")

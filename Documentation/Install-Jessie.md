@@ -1,51 +1,58 @@
 # Install Instructions for PiClock
-## For Raspbian Stretch
+## For Raspbian Jessie
 
-PiClock and this install guide are based on Raspian Stretch downloaded from
-https://www.raspberrypi.org/downloads/raspbian/ I suggest using
-"Raspbian Stretch with desktop"  It will work with many raspbian versions,
-but you may have to add more packages, etc.  That exercise is left for the reader.
+PiClock and this install guide are based on Raspian Jessie
+last released on https://downloads.raspberrypi.org/raspbian/images/raspbian-2017-07-05/
+It will work with many raspbian versions, but you may have to add more packages,
+etc.  That exercise is left for the reader.
 
 What follows is a step by step guide.  If you start with a new clean raspbian
 image, it should just work. I'm assuming that you already know how to hook
 up your Raspi, monitor, and keyboard/mouse.   If not, please do a web search
 regarding setting up the basic hardware for your Raspi.
 
-### Download Raspbian Stretch and put it on an SD Card
+### Download Raspbian Jessie and put it on an SD Card
 
-The instructions for doing this are on the following page:
-https://www.raspberrypi.org/documentation/installation/installing-images/README.md
+The image and instructions for doing this are on the following page:
+https://www.raspberrypi.org/downloads/
 
 ### First boot and configure
 A keyboard and mouse are really handy at this point.
 When you first boot your Pi, you'll be presented with the desktop.
-Following this there will be several prompts to set things up, follow
-those prompts and set things as they make sense for you.  Of course
-setting the proper timezone for a clock is key.
-
-Eventually the Pi will reboot, and you'll be back to the desktop.
-We need to configure a few more things.
-
 Navigate to Menu->Preferences->Raspberry Pi Configuration.
 Just change the Items below.
- - System Tab
+ - General Tab
+  - Change User Password -- this will set the password for the use pi,
+     for ssh logins.
   - Hostname: (Maybe set this to PiClock?)
   - Boot: To Desktop
   - Auto Login: Checked
-  - Overscan: (Initally leave as default, but if your monitor has extra
-    black area on the border, or bleeds off the edge, then change this)
+  - Underscan: (Initally leave as default, but if your monitor has extra black area on the border, or bleeds off the edge, then change this)
  - Interfaces
   - 1-Wire Enable (for the inside temperature, DS18B20 if you're using it)
-  - SSH is handy (if you'd like to connect to your clock from another computer)
-  - VNC can be handy  (same reason as ssh)
+ - Internationalization Tab
+   - Set Locale.
+    - Set Language  -- if you set language and country here, the date will automaticly be in your language
+    				-- other settings in Config.py (described later) control the language of the weather data
+    - Set Country
+    - Character Set: UTF-8
+  - Set Timezone.
+    -  You'll want this to be correct, or the clock will be wrong.
+  - Set Keyboard
+    -  Generally not needed, but good to check if you like the default
+  - Set WiFi Country (may not always show up)
 
+Finish and let it reboot.
 
-Click ok, and allow it to reboot.
+I've found that sometimes on reboot, Jessie doesn't go back to desktop mode.
+If this is the case,
+```
+sudo raspi-config
+```
+and change the boot option to Desktop/Auto-login
 
 ### editing config.txt
 
-(Only required if you will be using IR Remote control or DS18B20 temperature
- sensors)
 Log into your Pi, (either on the screen or via ssh)
 
 use nano to edit the boot config file
@@ -82,7 +89,8 @@ sudo reboot
 
 ### Get connected to the internet
 
-Verify you have internet access from the Pi
+Either connect to your wired network, or setup wifi and verify you have
+internet access from the Pi
 
 ```
 ping github.com
@@ -106,7 +114,7 @@ then get qt4 for python
 apt-get install python-qt4
 ```
 you may need to confirm some things, like:
-After this operation, 59.5 MB of additional disk space will be used.
+After this operation, 44.4 MB of additional disk space will be used.
 Do you want to continue [Y/n]? y
 Go ahead, say yes
 
@@ -121,7 +129,6 @@ a missing include file, then do this:
 apt-get install python-dev
 ```
 Then try the pip command again.
-
 
 then get unclutter (disables the mouse pointer when there's no activity)
 ```
@@ -143,19 +150,28 @@ python setup.py install
 apt-get install lirc
 ```
 
-use nano to edit lirc options file
+use nano to edit lirc hardware file
 ```
-sudo nano /etc/lirc/lirc_options.conf
+sudo nano /etc/lirc/hardware.conf
 ```
-Be sure the uinput line appears as follows
+Be sure the LIRCD_ARGS line appears as follows
 ```
-uinput         = True
+LIRCD_ARGS="--uinput"
 ```
 
-Be sure the driver line appears as follows
+Be sure the DRIVER line appears as follows
 ```
-driver          = default
+DRIVER="default"
+```
 
+Be sure the DEVICE line appears as follows
+```
+DEVICE="/dev/lirc0"
+```
+
+Be sure the MODULES line appears as follows
+```
+MODULES="lirc_rpi"
 ```
 
 ### Get mpg123 (optional to play NOAA weather radio streams)
@@ -175,13 +191,10 @@ reboot
 ### Get the PiClock software
 Log into your Pi, (either on the screen or via ssh) (NOT as root)
 You'll be in the home directory of the user pi (/home/pi) by default,
-and this is where we want to be.  Note that the following command while
-itself not being case sensitive, further operation of PiClock may be
-affected if the upper and lower case of the command is not followed.
+and this is where we want to be.
 ```
 git clone https://github.com/n0bel/PiClock.git
 ```
-(Optional for GPIO keys)
 Once that is done, you'll have a new directory called PiClock
 A few commands are needed if you intend to use gpio buttons
 and the gpio-keys driver to compile it for the latest Raspbian:
@@ -192,12 +205,11 @@ cd ../..
 ```
 
 ### Set up Lirc (IR Remote)
-
 If you're using the recommended IR Key Fob,
 https://www.google.com/search?q=Mini+Universal+Infrared+IR+TV+Set+Remote+Control+Keychain
 you can copy the lircd.conf file included in the distribution as follows:
 ```
-sudo cp IR/lircd.conf /etc/lirc/lircd.conf.d/
+sudo cp IR/lircd.conf /etc/lirc/
 ```
 If you're using something else, you'll need to use irrecord, or load a remote file
 as found on http://lirc.org/
@@ -242,8 +254,8 @@ sudo reboot
 
 ### Configure the PiClock api keys
 
-We need to set API keys for DarkSky and Mapbox or Google Maps.
-These are both unless you have large volume.
+The first is to set API keys for DarkSky and Google Maps.
+These are both free, unless you have large volume.
 The PiClock usage is well below the maximums imposed by the no cost api keys.
 
 #### DarkSky api keys
@@ -251,41 +263,28 @@ The PiClock usage is well below the maximums imposed by the no cost api keys.
 DarkSky api keys are created at this link:
 https://darksky.net/dev
 
-#### Map API Key
-
-You have your choice of Mapbox or Google Maps to get your underlying maps from.
-You only need one or the other (mbapi or googleapi)
-
 #### Google Maps API key
 
-A Google Maps api key is required to use Google Maps.
-(Requires credit card which won't be charged unless usage is great.)
+A Google Maps api key is _required_.  (Requires credit card which won't be
+charged unless usage is great.)
 
 An intro to Google static maps api keys, and a link to creating your account and ApiKeys:
 https://developers.google.com/maps/documentation/maps-static/intro
 You'll require a google user and password.  It'll also require a credit card.
-The credit card should not be charged, because my reading of
-https://cloud.google.com/maps-platform/pricing/sheet/ the $200.00 credit will
+The credit card should not be charged, because my reading of https://cloud.google.com/maps-platform/pricing/sheet/ the $200.00 credit will
 apply, and your charges incurred will be for 31 map pulls per month will be
 $0.62 , if you reboot daily.
 You'll be required to create a "project" (maybe PiClock for a project name?)
 You need to then activate the key.
 
 _Protect your API keys._  You'd be surprised how many pastebin's are out
-there with valid API keys, because of people not being careful.   _If you post
-your keys somewhere, your usage will skyrocket, and your bill as well._  Google
+there with valid API keys, because of people not being careful.   If you post
+your keys somewhere, your usage will skyrocket, and your bill as well.  Google
 has the ability to add referer, device and ip requirements on your api key.  It
 can also allow you to limit an api key to specific applications only (static-maps)
 in this case.   Also you might consider disabling all the other APIs on your
 project dashboard.   Under the Billing section of things you can set up budgets
 and alerts.  (Set to like $1.00)
-
-#### Mapbox api keys
-
-Mapbox api keys (access tokens) are created by signing up at this link:
-
-https://www.mapbox.com/signup/
-
 
 
 Now that you have your api keys...
@@ -301,11 +300,8 @@ Put your api keys in the file as indicated
 #change this to your API keys
 # DarkSky API key
 dsapi = 'YOUR DARKSKY API KEY'
-# Map API keys -- only needs 1 of the following
-# Google Maps API key (if usemapbox is not set in Config)
-googleapi = 'YOUR GOOGLE MAPS API KEY'
-# Mapbox API key (access_token) [if usemapbox is set in Config]
-mbapi = 'YOUR MAPBOX ACCESS TOKEN'
+# Google Maps API key
+googleapi = 'YOUR GOOGLE API KEY'
 ```
 
 ### Configure your PiClock
@@ -428,11 +424,6 @@ PyQtPiClock with an alternate config.
 First you need to set up an alternate config.   Config.py is the normal name, so perhaps Config-Night.py
 might be appropriate.  For a dimmer display use Config-Example-Bedside.py as a guide.
 
-First we must make switcher.sh executable (git removes the x flags)
-```
-cd PiClock
-chmod +x switcher.sh
-```
 Now we'll tell our friend cron to run the switcher script (switcher.sh) on day/night cycles.
 Run the cron editor: (should *not* be roor)
 ```
