@@ -52,23 +52,12 @@ fi
 #xmessage -timeout 5 Starting PiClock....... &
 zenity --info --timeout 3 --text "Starting PiClock......." >/dev/null 2>&1 &
 
-# stop screen blanking
-echo "Disabling screen blanking...."
-#xset s off
-#xset -dpms
-#xset s noblank
-
 # get rid of mouse cursor
 pgrep unclutter >/dev/null 2>&1
 if [ $? -eq 1 ]
 then
 	unclutter >/dev/null 2>&1 &
 fi
-
-echo "Setting sound to max (assuming Monitor Tv controls volume)...."
-# push sound level to maximum
-amixer  sset PCM,0 50% >/dev/null 2>&1
-#amixer cset numid=1 -- 400 >/dev/null 2>&1
 
 # NeoPixel AmbiLights
 echo "Checking for NeoPixels Ambilight..."
