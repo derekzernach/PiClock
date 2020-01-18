@@ -20,13 +20,19 @@ hourhand = 'images/hourhand.png'
 minhand = 'images/minhand.png'
 sechand = 'images/sechand.png'
 
+# SlideShow
+useslideshow = 0             # 1 to enable, 0 to disable
+slide_time = 305              # in seconds, 3600 per hour
+slides = 'images/slideshow'   # the path to your local images
+slide_bg_color = "#000"       # https://htmlcolorcodes.com/  black #000
 
-digital = 0             # 1 = Digtal Clock, 0 = Analog Clock
+digital = 0                 # 1 = Digtal Clock, 0 = Analog Clock
 
 # Goes with light blue config (like the default one)
 digitalcolor = "#50CBEB"
-digitalformat = "{0:%I:%M\n%S %p}"  # The format of the time
+digitalformat = "{0:%I:%M\n%S %p}"  # Format of the digital clock face
 digitalsize = 200
+
 # The above example shows in this way:
 #  https://github.com/n0bel/PiClock/blob/master/Documentation/Digital%20Clock%20v1.jpg
 # ( specifications of the time string are documented here:
@@ -36,6 +42,8 @@ digitalsize = 200
 # digitalsize = 250
 #  The above example shows in this way:
 #  https://github.com/n0bel/PiClock/blob/master/Documentation/Digital%20Clock%20v2.jpg
+
+digitalformat2 = "{0:%H:%M:%S}"  # Format of the digital time on second screen
 
 usemapbox = 0   # Use Mapbox.com for maps, needs api key (mbapi in ApiKeys.py)
 metric = 0  # 0 = English, 1 = Metric
@@ -70,13 +78,13 @@ DateLocale = ''
 LPressure = "Pressure "
 LHumidity = "Humidity "
 LWind = "Wind "
-Lgusting = " gusting "
+Lgusting = " gust "
 LFeelslike = "Feels like "
-LPrecip1hr = " Precip 1hr:"
+LPrecip1hr = " Precip 1hr: "
 LToday = "Today: "
-LSunRise = "Sun Rise:"
+LSunRise = "Sun Rise: "
 LSet = " Set: "
-LMoonPhase = " Moon Phase:"
+LMoonPhase = " Moon: "
 LInsideTemp = "Inside Temp "
 LRain = " Rain: "
 LSnow = " Snow: "
@@ -92,7 +100,8 @@ Lmoon8 = 'Waning Crecent'
 # RADAR
 # By default, primary_location entered will be the
 #  center and marker of all radar images.
-# To update centers/markers, change radar sections below the desired lat/lon as:
+# To update centers/markers, change radar sections
+# below the desired lat/lon as:
 # -FROM-
 # primary_location,
 # -TO-
@@ -101,8 +110,13 @@ radar1 = {
     'center': primary_location,  # the center of your radar block
     'zoom': 7,  # this is a maps zoom factor, bigger = smaller area
     'style': 'mapbox/satellite-streets-v10',  # optional style (mapbox only)
+    'color': 6,  # rainviewer radar color style:
+                 # https://www.rainviewer.com/api.html#colorSchemes
+    'smooth': 1,  # rainviewer radar smoothing
+    'snow': 1,  # rainviewer radar show snow as different color
     'markers': (   # google maps markers can be overlayed
         {
+            'visible': 1,  # 0 = hide marker, 1 = show marker
             'location': primary_location,
             'color': 'red',
             'size': 'small',
@@ -115,11 +129,17 @@ radar1 = {
 radar2 = {
     'center': primary_location,
     'zoom': 11,
+    'style': 'mapbox/satellite-streets-v10',
+    'color': 6,
+    'smooth': 1,
+    'snow': 1,
     'markers': (
         {
+            'visible': 1,
             'location': primary_location,
             'color': 'red',
             'size': 'small',
+            'image': 'teardrop-dot',
         },
     )
 }
@@ -128,11 +148,17 @@ radar2 = {
 radar3 = {
     'center': primary_location,
     'zoom': 7,
+    'style': 'mapbox/satellite-streets-v10',
+    'color': 6,
+    'smooth': 1,
+    'snow': 1,
     'markers': (
         {
+            'visible': 1,
             'location': primary_location,
             'color': 'red',
             'size': 'small',
+            'image': 'teardrop-dot',
         },
     )
 }
@@ -140,11 +166,17 @@ radar3 = {
 radar4 = {
     'center': primary_location,
     'zoom': 11,
+    'style': 'mapbox/satellite-streets-v10',
+    'color': 6,
+    'smooth': 1,
+    'snow': 1,
     'markers': (
         {
+            'visible': 1,
             'location': primary_location,
             'color': 'red',
             'size': 'small',
+            'image': 'teardrop-dot',
         },
     )
 }
